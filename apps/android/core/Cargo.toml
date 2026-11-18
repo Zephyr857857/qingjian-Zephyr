@@ -39,3 +39,6 @@ workspace = true
 tracing-android = "0.2.0"
 tracing-appender.workspace = true
 tracing-subscriber.workspace = true
+# 输入法进程被系统长期保活：渲染、面板重建是尖峰负载，系统 malloc 对空闲页归还保守，
+# RSS 尖峰后落不回来。jemalloc 配短 decay 让空闲页及时归还（malloc_conf 见 .cargo/config.toml）。
+tikv-jemallocator = "0.6"

@@ -2,6 +2,12 @@
 //!
 //! Android 的输入法跑在自己的进程里，没有 Server / 薄壳之分，Engine 直接装在这个 `.so` 里。
 
+// 安卓：用 jemalloc 并让空闲页尽快归还。输入法是常驻进程，渲染/面板重建是尖峰负载，
+// 系统 malloc 归还保守会让 RSS 尖峰后落不回来；malloc_conf 在 .cargo/config.toml 里设。
+#[cfg(target_os = "android")]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 mod appearance;
 mod assembly;
 mod cloud;

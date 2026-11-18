@@ -6,3 +6,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.i686-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+# 安卓 jemalloc：尖峰后空闲页尽快归还，压低输入法常驻 RSS。
+# jemalloc-sys 在编译期把这个值写进 .so，运行期不用再导 malloc_conf 符号。
+# decay 给 1 秒而非 0，避免打字过程中缓存被立刻清掉带来的抖动。
+# 按 target 限定，别影响 Linux/macOS/Windows 的构建。
+[target.aarch64-linux-android]
+env = { JEMALLOC_SYS_WITH_MALLOC_CONF = "dirty_decay_ms:1000,muzzy_decay_ms:1000" }
