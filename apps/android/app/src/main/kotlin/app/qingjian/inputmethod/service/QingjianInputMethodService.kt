@@ -30,6 +30,7 @@ import app.qingjian.inputmethod.core.store.ClipboardStore
 import app.qingjian.inputmethod.core.store.PhraseItem
 import app.qingjian.inputmethod.core.store.PhraseRules
 import app.qingjian.inputmethod.core.store.Shuangpin
+import app.qingjian.inputmethod.core.store.Themes
 import app.qingjian.inputmethod.keyboard.KeyboardView
 import app.qingjian.inputmethod.keyboard.ShiftState
 import app.qingjian.inputmethod.keyboard.layout.Key
@@ -300,6 +301,17 @@ class QingjianInputMethodService :
     override fun onWindowHidden() {
         super.onWindowHidden()
         AppLog.info("window hidden")
+        // 键盘收起时放掉字形位图缓存：进程与 App 共用、被系统长期保活，
+        // 字形缓存没有上限，不清会随输入量一直涨（下次弹出按需重新栅格化）。
+        engine.trimCaches()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+            Themes.clearPreviews()
+            if (::engine.isInitialized) engine.trimCaches()
+        }
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {

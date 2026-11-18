@@ -150,6 +150,14 @@ impl TextPainter {
         self.measured.clear();
     }
 
+    /// 放掉字形位图缓存与量宽缓存。cosmic-text 的 `SwashCache` 没有容量上限也不会自动回收，
+    /// 输入法这种长驻进程打字久了缓存的字形位图会一直涨；键盘隐藏或系统回收内存时调一次，
+    /// 下次绘制按需重新栅格化（瞬时多花几毫秒，换来内存有界）。
+    pub fn trim_cache(&mut self) {
+        self.cache = SwashCache::new();
+        self.measured.clear();
+    }
+
     /// 一段文字的宽高（像素），一行到底。高度就是行高。
     pub fn measure(&mut self, text: &str, style: &TextStyle) -> TextSize {
         self.measure_within(text, style, None)

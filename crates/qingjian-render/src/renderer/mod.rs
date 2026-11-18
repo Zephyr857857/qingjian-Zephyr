@@ -193,6 +193,12 @@ impl Renderer {
         self.stage.forget();
     }
 
+    /// 放掉字形位图与量宽缓存（键盘隐藏或系统回收内存时调）。长驻进程里 SwashCache
+    /// 没有容量上限，打字久了会一直涨；清掉后按需重新栅格化，内存有界。
+    pub fn trim_cache(&mut self) {
+        self.text().trim_cache();
+    }
+
     /// 有过渡或循环动画在播时，按 `now` 重画一帧（不重建树、不排版）；没有在播的返回 `None`。
     pub fn tick_at(&mut self, now: Instant) -> Result<Option<Rendered>, RenderError> {
         let painted = self.stage.tick_at(now)?;

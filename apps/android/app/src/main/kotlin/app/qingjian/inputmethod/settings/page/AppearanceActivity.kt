@@ -23,6 +23,12 @@ import app.qingjian.inputmethod.theme.TextSize
 class AppearanceActivity : PageActivity() {
     override val title = R.string.page_appearance
 
+    /** 退出外观页就放掉预览位图，别让它们常驻在与输入法共用的进程里。 */
+    override fun onDestroy() {
+        super.onDestroy()
+        Themes.clearPreviews()
+    }
+
     override fun content(): List<View> {
         val settings = Settings.load(this)
         val dark = settings.appearance.dark(this)

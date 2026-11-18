@@ -92,6 +92,9 @@ internal object Native {
 
     external fun reset(handle: Long)
 
+    /** 放掉候选条画笔的字形位图与量宽缓存（键盘隐藏、系统回收内存时调）。 */
+    external fun trimCaches(handle: Long)
+
     /** 画最新一帧的候选条，返回尺寸与可点区域的 JSON；[highlighted] 为负不高亮，[visibleWidth] 以内的候选记成看到过（生词本次数）。画不出来返回 null。 */
     external fun renderStrip(handle: Long, highlighted: Int, scale: Float, dark: Boolean, visibleWidth: Int): String?
 

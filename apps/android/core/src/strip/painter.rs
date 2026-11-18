@@ -127,6 +127,12 @@ impl StripPainter {
         Ok(meta)
     }
 
+    /// 放掉字形位图与量宽缓存。键盘隐藏或系统回收内存时由壳调：进程与 App 共用且被长期保活，
+    /// 字形缓存没有上限，不清会随输入量一直涨。清掉后下一帧按需重新栅格化。
+    pub fn trim_cache(&mut self) {
+        self.renderer.trim_cache();
+    }
+
     /// 把上次画的像素拷进 `out`；没画过或 `out` 不够大返回 `false`。
     pub fn copy_pixels(&self, out: &mut [u8]) -> bool {
         let Some(rendered) = &self.last else {

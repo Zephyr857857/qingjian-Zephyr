@@ -137,6 +137,24 @@ pub extern "system" fn Java_app_qingjian_inputmethod_core_Native_reset<'local>(
     let _ = catch_unwind(AssertUnwindSafe(|| handle.session.reset()));
 }
 
+/// 放掉候选条画笔的字形位图与量宽缓存（键盘隐藏或系统回收内存时调，主线程）。
+/// 进程与 App 共用且被长期保活，字形缓存没上限，不清会随输入量一直涨。
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_app_qingjian_inputmethod_core_Native_trimCaches<'local>(
+    _env: JNIEnv<'local>,
+    _this: JObject<'local>,
+    handle: jlong,
+) {
+    if handle == 0 {
+        return;
+    }
+    // SAFETY: 同 `frame`，句柄只在主线程用。
+    let handle = unsafe { &mut *(handle as *mut Handle) };
+    if let Some(strip) = &mut handle.strip {
+        let _ = catch_unwind(AssertUnwindSafe(|| strip.trim_cache()));
+    }
+}
+
 /// 跑一个操作并把帧序列化成 Java 字符串；句柄无效或 panic 返回 null，壳当作空帧。
 fn frame<'local>(
     env: JNIEnv<'local>,

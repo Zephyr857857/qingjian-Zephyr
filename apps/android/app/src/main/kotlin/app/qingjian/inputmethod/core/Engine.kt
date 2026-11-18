@@ -290,6 +290,11 @@ class Engine(context: Context, private val onReady: () -> Unit) {
         return json.getString("kind") to json.getString("text")
     }
 
+    /** 放掉字形位图与量宽缓存；键盘隐藏或系统回收内存时调，下一帧按需重新栅格化。 */
+    fun trimCaches() {
+        if (ready) Native.trimCaches(handle)
+    }
+
     fun reset() {
         if (ready) Native.reset(handle)
     }

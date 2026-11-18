@@ -30,6 +30,16 @@ repository = "https://github.com/qingjian-team/qingjian"
 [workspace.lints.clippy]
 all = "warn"
 
+# release 产物瘦身：workspace 此前没有任何 profile 覆盖，各端（尤其安卓 .so）
+# 都按缺省编译——16 个 codegen units、无跨 crate LTO、符号表留在产物里。
+# fat LTO + 单 codegen unit 让跨 crate 内联充分，strip 剥掉符号表；
+# 编译变慢，但 release 只发版时编，安卓端 .so 体积与代码页常驻都明显下降。
+# 注意：不能用 panic = "abort"，各平台 JNI/FFI 出口靠 catch_unwind 兜 panic。
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+
 [workspace.dependencies]
 # 内部 crate
 qingjian-core = { path = "crates/qingjian-core" }

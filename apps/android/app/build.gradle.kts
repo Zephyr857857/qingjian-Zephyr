@@ -53,7 +53,13 @@ android {
             if (project.hasProperty("sideBySide")) applicationIdSuffix = ".dev"
         }
         release {
-            isMinifyEnabled = false
+            // 开启 R8：dex 与资源瘦身，输入法进程常驻，少一个类少一份元数据常驻。
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
         }
     }
