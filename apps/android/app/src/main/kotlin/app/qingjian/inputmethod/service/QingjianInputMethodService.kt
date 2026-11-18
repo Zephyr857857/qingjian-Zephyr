@@ -196,6 +196,7 @@ class QingjianInputMethodService :
             if (gameSettings?.glosses == false) options.copy(learningLanguage = InputOptions.LEARNING_OFF) else options
         }
         composer.englishCandidates = settings.englishCandidates
+        composer.enterToSend = settings.enterToSend
         engine.setAppearance(settings.theme, settings.textSize.scale)
         cloud.sync(settings)
         // 布局没变时 layout 的 setter 不会重设方案，双拼方案、混输这些改了也得补上
@@ -256,7 +257,8 @@ class QingjianInputMethodService :
         composer.directInput = attribute.wantsDirectInput()
         composer.plainPunctuation = attribute.wantsPlainPunctuation()
         composer.privateInput = attribute.wantsPrivacy()
-        enterLabel = attribute.enterLabel()
+        // 回车强制发送开着时键面写「发送」，与按下去的行为一致；组句中第一次回车仍只落字
+        enterLabel = if (Settings.load(this).enterToSend) getString(R.string.enter_send) else attribute.enterLabel()
         panel?.keyboard?.enterLabel = enterLabel
         if (!(restarting && composer.resume())) composer.abandon()
         if (attribute.wantsNumbers()) composer.showNumbers()
@@ -348,6 +350,14 @@ class QingjianInputMethodService :
     override fun sendKey(keyCode: Int) = editor?.onKey(keyCode) ?: sendDownUpKeyEvents(keyCode)
 
     override fun performEditorAction(): Boolean = editor == null && sendDefaultEditorAction(true)
+
+    /** 回车键强制发送：浮动编辑条开着时不抢它的动作，其余情况一律发 IME_ACTION_SEND。 */
+    override fun performSend(): Boolean {
+        if (editor != null) return false
+        val connection = currentInputConnection ?: return false
+        connection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+        return true
+    }
 
     override fun showComposition(preedit: String, candidates: List<Candidate>) {
         shownPreedit = preedit

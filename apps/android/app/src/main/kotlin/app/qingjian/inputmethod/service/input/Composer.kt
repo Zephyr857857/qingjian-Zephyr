@@ -33,6 +33,9 @@ class Composer(private val engine: Engine, private val host: Host) {
         /** 执行输入框的缺省动作（搜索、发送、下一项）；没有缺省动作返回 false。 */
         fun performEditorAction(): Boolean
 
+        /** 强制发送：不管道输入框声明了什么动作，都执行 IME_ACTION_SEND。回车键开关开时用。 */
+        fun performSend(): Boolean
+
         fun showComposition(preedit: String, candidates: List<Candidate>)
 
         /** 键位表变了（中英、符号页、九宫格）。 */
@@ -151,6 +154,9 @@ class Composer(private val engine: Engine, private val host: Host) {
 
     /** 英文键盘也组句给英文词候选；关了字母直接上屏。 */
     var englishCandidates = true
+
+    /** 回车键强制发送（键盘设置里的开关）：非组句时按回车一律走 [Host.performSend]。 */
+    var enterToSend = false
 
     /** 敲的字母进组句：中文、日语总是进，英文看 [englishCandidates]。 */
     private val composesLetters: Boolean get() = !directInput && (chinese || japanese || englishCandidates)
@@ -271,7 +277,9 @@ class Composer(private val engine: Engine, private val host: Host) {
             }
 
             is Key.Enter -> when {
+                // 组句中先落字，不发送；再按一次（非组句）才按开关决定是否强制发送
                 composing -> settle()
+                enterToSend && host.performSend() -> Unit
                 !host.performEditorAction() -> host.sendKey(KeyEvent.KEYCODE_ENTER)
             }
 

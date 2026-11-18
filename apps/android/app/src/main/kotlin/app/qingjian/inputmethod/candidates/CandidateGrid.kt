@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import app.qingjian.inputmethod.core.frame.Candidate
 import app.qingjian.inputmethod.core.frame.Sense
+import app.qingjian.inputmethod.keyboard.Haptics
 import app.qingjian.inputmethod.keyboard.layout.Key
 import app.qingjian.inputmethod.keyboard.paint.KeyIcons
 import app.qingjian.inputmethod.panel.PanelActions
@@ -203,7 +204,10 @@ class CandidateGrid(
                 val cx = x - body.left
                 val cy = y - body.top + scroll.offset
                 val index = cells.indexOfFirst { it.contains(cx, cy) }
-                if (index >= 0) actions.selectCandidate(index)
+                if (index >= 0) {
+                    Haptics.tap(context)
+                    actions.selectCandidate(index)
+                }
             }
         }
     }

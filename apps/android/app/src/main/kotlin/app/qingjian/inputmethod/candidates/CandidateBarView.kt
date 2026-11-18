@@ -263,7 +263,10 @@ class CandidateBarView(
             return
         }
         if (!strip.isEmpty) {
-            strip.indexAt(x + scrollX).takeIf { it >= 0 }?.let(listener::onSelect)
+            strip.indexAt(x + scrollX).takeIf { it >= 0 }?.let { index ->
+                Haptics.tap(context)
+                listener.onSelect(index)
+            }
             return
         }
         notice?.let { (_, action) ->
@@ -315,6 +318,7 @@ class CandidateBarView(
                 val index = popupIndex
                 val forget = forgetItem
                 closePopup()?.let { item ->
+                    Haptics.tap(context)
                     if (item == forget) listener.onForget(index) else listener.onSelectTranslation(index, item)
                 }
             }
