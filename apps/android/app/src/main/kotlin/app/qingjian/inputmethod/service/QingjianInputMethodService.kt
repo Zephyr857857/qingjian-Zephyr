@@ -255,6 +255,11 @@ class QingjianInputMethodService :
     override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         composer.directInput = attribute.wantsDirectInput()
+        // 只依赖本次传入的 attribute，不赌 currentInputEditorInfo 的更新时机
+        val gameTarget = attribute.packageName?.takeIf { GameKeyboard.wanted(this, it) }
+        // 游戏键盘：游戏输入框常声明「不组句」（TYPE_NULL 等），上面据此设了 directInput=true，
+        // 字母会直接上屏、拼音候选和中文都出不来。悬浮小键盘就是用来打字的，游戏模式下强制走引擎组句。
+        if (gameTarget != null) composer.directInput = false
         composer.plainPunctuation = attribute.wantsPlainPunctuation()
         composer.privateInput = attribute.wantsPrivacy()
         // 回车强制发送开着时键面写「发送」，与按下去的行为一致；组句中第一次回车仍只落字
@@ -262,6 +267,12 @@ class QingjianInputMethodService :
         panel?.keyboard?.enterLabel = enterLabel
         if (!(restarting && composer.resume())) composer.abandon()
         if (attribute.wantsNumbers()) composer.showNumbers()
+        // 游戏键盘与普通键盘视图不同，必须在这里就切好：onStartInputView 阶段 setInputView 要等下一次输入才显示，
+        // 导致「设置页勾好进游戏第一次还是普通键盘、要再开关一次才悬浮」。此刻窗口还没 attach 新视图，本次即生效。
+        if (panel?.stale() == true || gameTarget != game.packageName) {
+            setInputView(onCreateInputView())
+            updateFullscreenMode()
+        }
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
@@ -271,10 +282,8 @@ class QingjianInputMethodService :
                 "imeOptions 0x${Integer.toHexString(info.imeOptions)}, restarting $restarting",
         )
         game.rememberLandscapeApp(info.packageName)
-        if (panel?.stale() == true || game.target() != game.packageName) {
-            setInputView(onCreateInputView())
-            updateFullscreenMode()
-        }
+        // 视图切换已提前到 onStartInput（那里 setInputView 本次即生效），这里不再重复，
+        // 否则横竖屏/游戏切换时连建两次视图。
         // 网络可能换了（「只在 Wi-Fi 下使用」）
         cloud.sync()
         // 上次读通讯录时系统给了空结果（「仅在使用中允许」时后台读不到），键盘弹出时再读

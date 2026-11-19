@@ -11,3 +11,7 @@ stroke-v1.0.0 = 537df23f82be8fae3f1f6a98f7617ec64c95b1dfb7fda67b4f2c8c891ae32d55
 vietnamese-v1.0.0 = d039c9c624ea0a62c0a9b5a0695e1bfca781387e41d585ce1a0bb20c8cd9488b vietnamese.qj
 vietnamese-chinese-v1.0.0 = d61771f05b30d1cdffe3737f13ea19ef058a960c195dbe5e3d938eaf7536340a vietnamese-chinese.qj
 wubi86-v1.0.0 = eecfe77c298403f89c5cc01b093bd1967d066b8e12d9d668580a7fd402d6f005 schemes/wubi86.qj
+glossary-de-v1.0.0 = 8657ea66e6919fa58aa9e78e8108eed7279f620e9ee5d2d04162ada2e0817b08 glossary-de.qj
+glossary-es-v1.0.0 = 5b09f753dba75d80c40e39e493ae4329fcfcd886a748f56720f10dc15b36be5b glossary-es.qj
+glossary-ja-v1.0.0 = 68a42c076e2f5fcedf3625847639cc9b00f6aef941ea25652b9a6e918fa3a1f8 glossary-ja.qj
+glossary-vi-v1.0.0 = b24ebcd699eb4f6f4fb582a4671a0b7064681b1205f15bf17b180fe07ed506ee glossary-vi.qj
