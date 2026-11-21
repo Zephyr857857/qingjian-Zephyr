@@ -65,10 +65,12 @@ object KeyboardLayout {
     fun qwerty(chinese: Boolean, japanese: Boolean = false, fullWidth: Boolean = true): List<List<Key>> = if (japanese) {
         japaneseRows()
     } else {
+        // 中文 26 键第三排左端：大写键在中文组句里没用，换成重输（清空组句/候选）；英文、日语保留大写键
+        val shiftOrClear = if (chinese && !japanese) Key.Clear else Key.Shift
         listOf(
             letters("qwertyuiop", TOP_HINTS),
             letters("asdfghjkl", if (chinese) MIDDLE_HINTS_ZH else MIDDLE_HINTS_EN),
-            listOf(Key.Shift) + letters("zxcvbnm", BOTTOM_HINTS) + Key.Backspace,
+            listOf(shiftOrClear) + letters("zxcvbnm", BOTTOM_HINTS) + Key.Backspace,
             lettersBottom(chinese, fullWidth),
         )
     }
@@ -102,7 +104,9 @@ object KeyboardLayout {
         }
         fun row(chars: String, hints: String) = chars.mapIndexed { i, char -> letter(char, hints.getOrNull(i)?.toString().orEmpty()) }
         val semicolon = ';' in keycaps
-        val shift = if (semicolon && semicolonShift) letter(';', "", weight = 1.5f, flickShift = true) else Key.Shift
+        // 非微软双拼第三排左端是纯大写键，中文输入里没用，换成重输；
+        // 微软双拼那个位置是分号键（点按出分号韵母），不是大写键，保留。
+        val shift = if (semicolon && semicolonShift) letter(';', "", weight = 1.5f, flickShift = true) else Key.Clear
         val middle = if (semicolon && !semicolonShift) "asdfghjkl;" else "asdfghjkl"
         return listOf(
             row("qwertyuiop", TOP_HINTS),
