@@ -1,3 +1,5 @@
+> ⚠️ **非官方 Fork**：本仓库是 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian) 的个人修改版（Android 端二改），由 [Zephyr857857](https://github.com/Zephyr857857) 维护，**与青简官方团队无关**。改动详情、许可合规说明与构建方式见 **[FORK.md](FORK.md)**，更新日志见 **[CHANGELOG.fork.md](CHANGELOG.fork.md)**。以下为上游原版说明。
+
 <p align="center"><b>简体中文</b> | <a href="docs/i18n/README.zh-Hant.md">繁體中文</a> | <a href="docs/i18n/README.en.md">English</a> | <a href="docs/i18n/README.ja.md">日本語</a> | <a href="docs/i18n/README.es.md">Español</a> | <a href="docs/i18n/README.vi.md">Tiếng Việt</a> | <a href="docs/i18n/README.de.md">Deutsch</a></p>
 
 <p align="center">
