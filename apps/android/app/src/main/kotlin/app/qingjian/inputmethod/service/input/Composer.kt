@@ -269,7 +269,8 @@ class Composer(private val engine: Engine, private val host: Host) {
                 )
             }
 
-            Key.Clear -> if (composing) apply(engine.clear())
+            // 重输：组句中清组句；打完字后的联想候选（非组句、非 offer）也一并清掉，让候选栏回工具栏
+            Key.Clear -> if (composing || completing) apply(engine.clear())
 
             // 拼音、日语组句里的大写字母另有含义，组句中只有英文能换大小写
             Key.Shift -> if (!composing || english) toggleShift()
