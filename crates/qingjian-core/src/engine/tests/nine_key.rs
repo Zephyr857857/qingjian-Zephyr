@@ -321,3 +321,25 @@ fn credible_multiword_sentence_still_leads() {
     let query = query(&mut engine, "64426");
     assert_eq!(query.candidates.items[0].text, "你好");
 }
+
+#[test]
+fn chosen_low_frequency_word_survives_preselect() {
+    // 回归：`xiaoya` 同码命中上千条（超过预选阈值），低频但反复选的「小雅」不能被词频在预选阶段砍掉。
+    let mut words = String::new();
+    for i in 0..1200 {
+        words.push_str(&format!("小雅{i}\txiao ya\t9000\n"));
+    }
+    words.push_str("爪哇\tzhao wa\t8000\n小雅\txiao ya\t200\n");
+    // 直接预置「xiaoya 下选过小雅 10 次」，模拟用户已反复上屏
+    let mut choices = HashMap::new();
+    choices.insert("xiaoya\t小雅".to_string(), 10);
+    let learner = CountingLearner(choices);
+    let mut engine = Engine::new(Dictionary::parse(&words).unwrap())
+        .with_learner(Box::new(learner));
+    engine.set_nine_key(true);
+    engine.set_input("942692");
+    let query = engine.query().unwrap();
+    let pos = query.candidates.items.iter().position(|c| c.text == "小雅");
+    assert!(pos.is_some(), "反复选的低频词被预选砍掉了（候选数 {}）", query.candidates.items.len());
+    assert!(pos.unwrap() < 5, "选过的词应该排到前面，实际位置 {pos:?}");
+}
