@@ -44,6 +44,9 @@ class CandidateBarView(
         /** 长按气泡里选了「删除」：删第 [index] 个候选（用户词、学习记录）。 */
         fun onForget(index: Int)
 
+        /** 长按气泡里选了「置顶 / 取消置顶」：[pin] 为 true 置顶第 [index] 个候选。 */
+        fun onPin(index: Int, pin: Boolean) {}
+
         /** 工具栏中间那排点了一个工具；调高度在这里自己处理，不会传出去。 */
         fun onToolbar(tool: ToolbarTool)
 
@@ -123,7 +126,13 @@ class CandidateBarView(
     /** 气泡里「删除」那一项的下标；这个候选删不了时为 -1。 */
     private var forgetItem = -1
 
-    /** 气泡里只有「删除」（候选没有译文）。 */
+    /** 气泡里「置顶 / 取消置顶」那一项的下标；这个候选不能置顶时为 -1。 */
+    private var pinItem = -1
+
+    /** [pinItem] 这一项点的到底是置顶（true）还是取消置顶（false）。 */
+    private var pinAction = true
+
+    /** 气泡里只有「删除 / 置顶」这些动作项、没有译文。 */
     private var forgetOnly = false
 
     private val scroller = OverScroller(context)
@@ -362,24 +371,39 @@ class CandidateBarView(
     }
 
     /**
-     * 长按候选：弹出它的译词，第一条对着手指；删得掉的候选（用户词、学过的词）末尾再跟一项「删除」，
-     * 对应桌面端修饰键 + 数字。没有译文也删不了的候选不弹。
+     * 长按候选：弹出它的译词，第一条对着手指；末尾按能力跟「置顶 / 取消置顶」「删除」，
+     * 对应桌面端候选菜单。没有译文也没有任何动作（置顶、删除）可做的候选不弹。
      */
     private fun openTranslations(event: MotionEvent) {
         if (event.x >= stripWidth) return
         val index = strip.indexAt(event.x + scrollX)
         val candidate = strip.candidates.getOrNull(index) ?: return
         val senses = candidate.senses
-        if (senses.isEmpty() && !candidate.forgettable) return
+        // 置顶：已置顶的给「取消置顶」，其余只要输入码合法就能置顶
+        val canPin = candidate.pinned || candidate.pinnable
+        if (senses.isEmpty() && !candidate.forgettable && !canPin) return
         popupIndex = index
         repaint()
         Haptics.hold(context)
         val items = senses.map { sense ->
             ChoicePopup.Item(sense.text, listOfNotNull(sense.pos, sense.reading).joinToString(" "), sense.fresh)
-        } + if (candidate.forgettable) listOf(ChoicePopup.Item(context.getString(R.string.candidate_forget), context.getString(R.string.candidate_forget_note))) else emptyList()
-        forgetItem = if (candidate.forgettable) senses.size else -1
+        }.toMutableList()
+        pinAction = !candidate.pinned
+        pinItem = if (canPin) {
+            items.add(
+                ChoicePopup.Item(
+                    context.getString(if (candidate.pinned) R.string.candidate_unpin else R.string.candidate_pin),
+                    context.getString(if (candidate.pinned) R.string.candidate_unpin_note else R.string.candidate_pin_note),
+                )
+            )
+            items.size - 1
+        } else -1
+        forgetItem = if (candidate.forgettable) {
+            items.add(ChoicePopup.Item(context.getString(R.string.candidate_forget), context.getString(R.string.candidate_forget_note)))
+            items.size - 1
+        } else -1
         forgetOnly = senses.isEmpty()
-        // 只有「删除」时不预选，得滑上去才算，免得长按一松手就删了
+        // 只有动作项（置顶 / 删除）时不预选，得滑上去才算，免得长按一松手就误触
         popup.show(items, initial = if (senses.isEmpty()) -1 else 0, fingerScreenX = event.rawX, bottom = 0f)
     }
 
@@ -393,9 +417,15 @@ class CandidateBarView(
             MotionEvent.ACTION_UP -> {
                 val index = popupIndex
                 val forget = forgetItem
+                val pin = pinItem
+                val pinning = pinAction
                 closePopup()?.let { item ->
                     Haptics.tap(context)
-                    if (item == forget) listener.onForget(index) else listener.onSelectTranslation(index, item)
+                    when (item) {
+                        forget -> listener.onForget(index)
+                        pin -> listener.onPin(index, pinning)
+                        else -> listener.onSelectTranslation(index, item)
+                    }
                 }
             }
 

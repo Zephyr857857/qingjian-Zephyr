@@ -99,6 +99,9 @@ class Engine(context: Context, private val onReady: () -> Unit) {
 
     fun forget(index: Int): Frame = Frame.parse(Native.forget(handle, index))
 
+    /** 候选置顶（pin=true）或取消置顶（false）。 */
+    fun pinCandidate(index: Int, pin: Boolean): Frame = Frame.parse(Native.pinCandidate(handle, index, pin))
+
     fun commitRaw(): Frame = Frame.parse(Native.commitRaw(handle))
 
     fun clear(): Frame = Frame.parse(Native.clear(handle))

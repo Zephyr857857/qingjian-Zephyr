@@ -142,7 +142,10 @@ fn weight_bonus_is_logarithmic_and_capped() {
     assert_eq!(weight_bonus(0), 0.0);
     assert!(weight_bonus(1) < weight_bonus(10));
     assert_eq!(weight_bonus(WEIGHT_CAP), weight_bonus(WEIGHT_CAP * 50));
-    assert!(weight_bonus(u32::MAX) < 1.6);
+    // 系数 0.6、封顶 100 次：上限约 0.6×ln(101)≈2.77，仍留余量给上下文 bigram。
+    assert!(weight_bonus(u32::MAX) < 3.0);
+    // 常点词确实比旧配置的 1.5 分更能顶上去。
+    assert!(weight_bonus(100) > 2.5);
 }
 
 #[test]

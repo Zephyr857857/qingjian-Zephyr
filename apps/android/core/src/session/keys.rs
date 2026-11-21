@@ -142,6 +142,49 @@ impl Session {
         frame
     }
 
+    /// 长按候选的「置顶 / 取消置顶」：底层是带输入码的常用语。置顶把这条挪到同码最前
+    /// （已有的移到首位、没有的新加），取消置顶把对应那条删掉；改完重挂常用语、重出帧。
+    pub fn pin_candidate(&mut self, index: usize, pin: bool) -> Frame {
+        let Some(candidate) = self.candidates.items.get(index).cloned() else {
+            return self.refresh(String::new());
+        };
+        let Some((code, text)) = self.engine.pin_target(&candidate) else {
+            return self.refresh(String::new());
+        };
+        let mut book = qingjian_learning::PhraseBook::open(&self.user_dir);
+        let found = book
+            .phrases()
+            .iter()
+            .position(|phrase| phrase.code == code && phrase.text == text);
+        let changed = if pin {
+            match found {
+                Some(at) => {
+                    let _ = book.move_to_top(at);
+                    true
+                }
+                None => book
+                    .add(&text, qingjian_learning::DEFAULT_GROUP, &code)
+                    .unwrap_or(false),
+            }
+        } else if let Some(at) = found {
+            book.remove(at).is_ok()
+        } else {
+            false
+        };
+        if changed {
+            crate::assembly::load_phrases(&mut self.engine, &self.user_dir);
+        }
+        let mut frame = self.refresh(String::new());
+        frame.notice = if !changed {
+            String::new()
+        } else if pin {
+            format!("已置顶「{text}」：打 {code} 时排最前")
+        } else {
+            format!("已取消置顶「{text}」")
+        };
+        frame
+    }
+
     /// 回车：敲的字母原样上屏；日语上屏转好的平假名（与日文输入法回车确定一致）。
     pub fn commit_raw(&mut self) -> Frame {
         if let Some(kana) = &mut self.kana {

@@ -29,13 +29,14 @@ pub use scored::{PreselectKey, Scored, SortKey};
 pub use single_chars::keep_only_single_chars;
 
 /// 用户选择次数的加分系数：加分 = 系数 × ln(1 + min(次数, [`WEIGHT_CAP`]))。
-/// 这个加分只负责「同音词里偏向用户常选的那个」，所以既取对数又封顶（最多约 1.5 分，e^1.5 ≈ 4.5 倍），
-/// 让上下文（bigram）仍能压过它；不封顶时选过 173 次的 的 会带着 5 分加分把任何含 的 的拆分路径抬到整词之上
+/// 这个加分只负责「同音词里偏向用户常选的那个」，所以取对数并封顶（最多约 2.8 分，e^2.8 ≈ 16 倍），
+/// 仍让上下文（bigram）有机会压过它；不封顶时选过很多次的 的 会带着高加分把含 的 的拆分路径抬到整词之上
 /// （`haode` 出 号的 而不是 好的）。用户用得多的词另有个人 bigram 里的一元项撑腰，不靠这里。
-pub const WEIGHT_BONUS: f64 = 0.5;
+/// 加大系数与上限，让「点过很多次」的单字双字真能顶上去（原来 20 次封顶、约 1.5 分，常点词顶不动）。
+pub const WEIGHT_BONUS: f64 = 0.6;
 
 /// 加分里计入的选择次数上限。
-pub const WEIGHT_CAP: u32 = 20;
+pub const WEIGHT_CAP: u32 = 100;
 
 /// 模糊音命中扣的分（词频减半）。敲错变体的代价见 `correction::TypoKind`。
 pub const FUZZY_PENALTY: f64 = std::f64::consts::LN_2;

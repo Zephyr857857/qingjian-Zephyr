@@ -23,6 +23,12 @@ pub struct FrameCandidate {
     /// 是通讯录里的名字：候选条在词的右上角画一个人头。
     pub contact: bool,
 
+    /// 长按能置顶（当前输入码合法、非英文模式；Core 的 `pin_target` 认账）。
+    pub pinnable: bool,
+
+    /// 这条已经是置顶词（Core 的 `CandidateKind::Custom`）：长按给「取消置顶」。
+    pub pinned: bool,
+
     /// 和首选不一样的字（`text` 的字节范围，Core 的 `differs_from_lead`）；只有 Rust 画候选条用，不过 JNI。
     #[serde(skip)]
     pub diff: Vec<Range<usize>>,
@@ -37,6 +43,8 @@ impl FrameCandidate {
             forgettable: false,
             cloud: false,
             contact: false,
+            pinnable: false,
+            pinned: false,
             diff: Vec::new(),
         }
     }
@@ -48,6 +56,13 @@ impl FrameCandidate {
 
     pub fn with_contact(mut self, contact: bool) -> Self {
         self.contact = contact;
+        self
+    }
+
+    /// 置顶能力：`pinnable` 是这条能不能置顶，`pinned` 是它已经是置顶词。
+    pub fn with_pin(mut self, pinnable: bool, pinned: bool) -> Self {
+        self.pinnable = pinnable;
+        self.pinned = pinned;
         self
     }
 }
@@ -65,6 +80,9 @@ impl From<&Candidate> for FrameCandidate {
             forgettable: candidate.kind.forgettable(),
             cloud: candidate.kind == CandidateKind::Cloud,
             contact: false,
+            // 真正的置顶标记在 Session::frame 里按当前输入码与引擎状态算（这里没有 engine）。
+            pinnable: false,
+            pinned: false,
             diff: Vec::new(),
         }
     }

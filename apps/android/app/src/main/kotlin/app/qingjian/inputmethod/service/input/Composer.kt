@@ -400,6 +400,9 @@ class Composer(private val engine: Engine, private val host: Host) {
     /** 长按候选选了「删除」：用户词整删、词库词清学习记录，结果用一句话提示。 */
     fun forget(index: Int) = apply(engine.forget(index))
 
+    /** 长按候选选了「置顶 / 取消置顶」：写成带输入码的常用语，排到这个码的候选最前。 */
+    fun pinCandidate(index: Int, pin: Boolean) = apply(engine.pinCandidate(index, pin))
+
     /**
      * 长按气泡里选的字符。全键盘选小写 = 照常敲这个字母；九宫格组句中选小写 = 这一位就是这个字母
      * （进缓冲区，和拼音列定音节一个道理）。其余（数字、大写、符号）先顶首选再上屏；

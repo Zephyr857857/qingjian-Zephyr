@@ -44,6 +44,9 @@ internal object Native {
 
     external fun forget(handle: Long, index: Int): String?
 
+    /** 候选置顶 / 取消置顶：[pin] 为 true 置顶、false 取消。 */
+    external fun pinCandidate(handle: Long, index: Int, pin: Boolean): String?
+
     external fun commitRaw(handle: Long): String?
 
     external fun clear(handle: Long): String?
