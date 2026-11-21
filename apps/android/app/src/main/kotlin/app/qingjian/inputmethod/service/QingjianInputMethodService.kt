@@ -184,7 +184,7 @@ class QingjianInputMethodService :
         val gameSettings = target?.let { GameKeyboard.load(this) }
         val settings = Settings.load(this).let { settings ->
             gameSettings ?: return@let settings
-            settings.copy(heightPercent = gameSettings.size.heightPercent, fullscreenAdapt = false)
+            settings.copy(heightPercent = gameSettings.heightPercent, fullscreenAdapt = false)
         }
         composer.layout = settings.layout
         composer.traditional = settings.traditional
@@ -214,7 +214,7 @@ class QingjianInputMethodService :
         showSideItems(emptyList())
         reopenPanel?.let(panel::open)
         reopenPanel = null
-        game.wrap(target, settings, gameSettings, panel.view)?.let { frame ->
+        game.wrap(target, settings, gameSettings, panel.view, panel.keyboard.baseHeight)?.let { frame ->
             neon = null
             return frame
         }
@@ -233,6 +233,11 @@ class QingjianInputMethodService :
     }
 
     override val editorPackage: String? get() = currentInputEditorInfo?.packageName
+
+    /** 缩放手柄逐帧调行高；范围用游戏键盘自己的，别被普通键盘的 70–150 截断。 */
+    override fun resizeKeyboardHeight(percent: Int) {
+        panel?.keyboard?.setHeightPercent(percent.coerceIn(GameKeyboard.HEIGHT_MIN, GameKeyboard.HEIGHT_MAX))
+    }
 
     override fun rebuild() {
         closePanel()
@@ -273,6 +278,8 @@ class QingjianInputMethodService :
             setInputView(onCreateInputView())
             updateFullscreenMode()
         }
+        // 疑似游戏输入框（TYPE_NULL）但没开悬浮键盘时轻提示一次，用本次的 attribute，不赌时机
+        if (gameTarget == null) game.maybeHint(attribute.packageName, attribute.inputType)
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
@@ -281,7 +288,7 @@ class QingjianInputMethodService :
             "start input view: ${info.packageName}, inputType 0x${Integer.toHexString(info.inputType)}, " +
                 "imeOptions 0x${Integer.toHexString(info.imeOptions)}, restarting $restarting",
         )
-        game.rememberLandscapeApp(info.packageName)
+        game.rememberApp(info.packageName)
         // 视图切换已提前到 onStartInput（那里 setInputView 本次即生效），这里不再重复，
         // 否则横竖屏/游戏切换时连建两次视图。
         // 网络可能换了（「只在 Wi-Fi 下使用」）

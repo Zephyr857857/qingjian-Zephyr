@@ -10,7 +10,7 @@ import app.qingjian.inputmethod.settings.GameKeyboard
 
 /**
  * 键盘 › 游戏键盘：总开关、样子（透明度、大小、译词）与用它的应用。
- * 应用只列横屏用青简打过字的（服务记下的 [GameKeyboard.seen]），勾上的那些横屏时换成悬浮小键盘。
+ * 应用只列用青简打过字的（服务记下的 [GameKeyboard.seen]），勾上的那些换成悬浮小键盘。
  */
 class GameKeyboardActivity : PageActivity() {
     override val title = R.string.page_game_keyboard
@@ -28,12 +28,17 @@ class GameKeyboardActivity : PageActivity() {
             ui.group(
                 R.string.section_game_look,
                 ui.slider(
-                    R.string.game_transparency_title, null, 0, GameKeyboard.TRANSPARENCY_MAX, game.transparency, step = 10,
+                    R.string.game_transparency_title, null, 0, GameKeyboard.TRANSPARENCY_MAX, game.transparency, step = 5,
                     format = { "$it%" },
                 ) { prefs.edit().putInt(GameKeyboard.KEY_TRANSPARENCY, it).apply() },
-                ui.segmentedRow(R.string.game_size_title, GameKeyboard.Size.entries.map { getString(it.label) }, game.size.ordinal) {
-                    prefs.edit().putString(GameKeyboard.KEY_SIZE, GameKeyboard.Size.entries[it].name).apply()
-                },
+                ui.slider(
+                    R.string.game_width_title, null, GameKeyboard.WIDTH_MIN, GameKeyboard.WIDTH_MAX, game.widthPercent, step = 1,
+                    format = { "$it%" },
+                ) { prefs.edit().putInt(GameKeyboard.KEY_WIDTH, it).apply() },
+                ui.slider(
+                    R.string.game_height_title, null, GameKeyboard.HEIGHT_MIN, GameKeyboard.HEIGHT_MAX, game.heightPercent, step = 1,
+                    format = { "$it%" },
+                ) { prefs.edit().putInt(GameKeyboard.KEY_HEIGHT, it).apply() },
                 ui.toggle(R.string.game_glosses_title, null, game.glosses) {
                     prefs.edit().putBoolean(GameKeyboard.KEY_GLOSSES, it).apply()
                 },

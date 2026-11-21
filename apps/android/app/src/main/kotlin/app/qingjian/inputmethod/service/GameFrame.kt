@@ -16,20 +16,28 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import app.qingjian.inputmethod.panel.base.PanelIcons
 import app.qingjian.inputmethod.panel.base.PanelIcons.Icon
+import app.qingjian.inputmethod.settings.GameKeyboard
 import app.qingjian.inputmethod.theme.Palette
 
 /**
- * 游戏键盘：铺满整屏的透明底，中间浮一块可拖动的键盘（顶上一条拖动栏 + [content]，即候选条与键盘）。
+ * 游戏键盘：铺满整屏的透明底，中间浮一块可拖动、可缩放的键盘（顶上一条拖动栏 + [content]，即候选条与键盘）。
  * 整屏只有键盘那一块收触摸，其余透给下面的游戏，见服务的 `onComputeInsets` 与 [touchableRect]。
  * 位置记成左上角在可挪范围里的比例（[positionX] / [positionY]），换了屏幕尺寸、键盘大小也落在屏内。
  * 底边留出 [BOTTOM_GUARD_DP]：贴底时最下一排键会落进系统底部手势的感应区（MIUI 上点空格、符号被当成手势吃掉）。
+ * 拖动栏的缩放手柄按住往右下拖放大、往左上拖缩小：宽在 [GameKeyboard.WIDTH_MIN/MAX] 间连续变，
+ * 高经 [Listener.onGameResize] 交给服务逐帧调键盘行高，松手才写设置。
  */
 @SuppressLint("ViewConstructor")
 class GameFrame(
     context: Context,
     palette: Palette,
     content: View,
-    private val widthFraction: Float,
+    /** 键盘宽度占屏宽的比例（0..1，来自 [GameKeyboard.widthPercent]）。 */
+    private var widthFraction: Float,
+    /** 当前键盘行高百分比，缩放时逐帧更新。 */
+    private var heightPercent: Int,
+    /** 100% 行高时的键盘像素高度，把缩放的竖向位移换算成百分比。 */
+    private val baseHeight: Float,
     transparency: Int,
     var positionX: Float,
     var positionY: Float,
@@ -46,6 +54,12 @@ class GameFrame(
         fun onGameNormalKeyboard()
 
         fun onGameHide()
+
+        /**
+         * 缩放手柄拖动中：[widthPercent]/[heightPercent] 是新的连续尺寸。
+         * [done] 为 false 时服务只逐帧改键盘行高（不写设置、不重建），true 时把最终尺寸写进设置。
+         */
+        fun onGameResize(widthPercent: Int, heightPercent: Int, done: Boolean)
     }
 
     private val density = resources.displayMetrics.density
@@ -105,7 +119,9 @@ class GameFrame(
     /** 键盘上下能挪的范围：底边让出手势区。 */
     private fun freeHeight(boxHeight: Int) = (height - dp(BOTTOM_GUARD_DP) - boxHeight).coerceAtLeast(0)
 
-    /** 拖动栏：左边透明度、换回普通键盘，中间一道拖动条，右边收起；空白处按住拖动整块键盘。 */
+    /**
+     * 拖动栏：左边透明度、换回普通键盘、缩放手柄，中间一道拖动条，右边收起；空白处按住拖动整块键盘。
+     */
     @SuppressLint("ViewConstructor")
     private inner class Header(context: Context, palette: Palette) : FrameLayout(context) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = palette.text }
@@ -114,12 +130,18 @@ class GameFrame(
         private var downY = 0f
         private var fromX = 0f
         private var fromY = 0f
+        // 缩放手柄拖动起点
+        private var resizeDownX = 0f
+        private var resizeDownY = 0f
+        private var resizeWidth = 0f
+        private var resizeHeight = 0
 
         init {
             setWillNotDraw(false)
             val left = LinearLayout(context).apply {
                 addView(button(null) { listener.onGameTransparency() })
                 addView(button(Icon.KEYBOARD) { listener.onGameNormalKeyboard() })
+                addView(resizeButton())
             }
             addView(left, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.START))
             addView(
@@ -144,6 +166,56 @@ class GameFrame(
         }.apply {
             layoutParams = LinearLayout.LayoutParams(dp(BUTTON_DP), LinearLayout.LayoutParams.MATCH_PARENT)
             setOnClickListener { onClick() }
+        }
+
+        /** 缩放手柄：斜向双箭头；按住拖动改宽高，吃掉触摸不让 [Header.onTouchEvent] 去挪位置。 */
+        private fun resizeButton(): View = object : View(context) {
+            private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = paint.color
+                style = Paint.Style.STROKE
+                strokeWidth = 1.8f * density
+                strokeCap = Paint.Cap.ROUND
+            }
+
+            override fun onDraw(canvas: Canvas) {
+                val cx = width / 2f
+                val cy = height / 2f
+                val r = 6f * density
+                val a = 3.4f * density
+                // 左下 ↔ 右上的对角双箭头
+                canvas.drawLine(cx - r, cy + r, cx + r, cy - r, line)
+                canvas.drawLine(cx + r - a, cy - r, cx + r, cy - r, line)
+                canvas.drawLine(cx + r, cy - r, cx + r, cy - r + a, line)
+                canvas.drawLine(cx - r + a, cy + r, cx - r, cy + r, line)
+                canvas.drawLine(cx - r, cy + r - a, cx - r, cy + r, line)
+            }
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(dp(BUTTON_DP), LinearLayout.LayoutParams.MATCH_PARENT)
+            @SuppressLint("ClickableViewAccessibility")
+            setOnTouchListener { _, event ->
+                val frame = this@GameFrame
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        resizeDownX = event.rawX
+                        resizeDownY = event.rawY
+                        resizeWidth = frame.widthFraction
+                        resizeHeight = frame.heightPercent
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val width = (resizeWidth + (event.rawX - resizeDownX) / frame.width.coerceAtLeast(1))
+                            .coerceIn(GameKeyboard.WIDTH_MIN / 100f, GameKeyboard.WIDTH_MAX / 100f)
+                        val height = (resizeHeight + (event.rawY - resizeDownY) / frame.baseHeight.coerceAtLeast(1f) * 100)
+                            .toInt().coerceIn(GameKeyboard.HEIGHT_MIN, GameKeyboard.HEIGHT_MAX)
+                        frame.widthFraction = width
+                        frame.heightPercent = height
+                        frame.requestLayout()
+                        listener.onGameResize((width * 100).toInt(), height, false)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                        listener.onGameResize((frame.widthFraction * 100).toInt(), frame.heightPercent, true)
+                }
+                true
+            }
         }
 
         override fun onDraw(canvas: Canvas) {
