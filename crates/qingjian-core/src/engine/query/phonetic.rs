@@ -13,7 +13,7 @@ use crate::engine::{
     ABBREVIATION_CHOICE_PREFIX, Learner, MAX_CANDIDATES, abbreviated_count, choice_key,
     pattern_key, segment_longest_prefix,
 };
-use crate::ranking::{FUZZY_PENALTY, Scored};
+use crate::ranking::{FUZZY_PENALTY, PROMOTE_CHOICE_THRESHOLD, Scored};
 use crate::{
     Candidate, CandidateKind, CandidateList, Engine, ParseError, Query, Segmentation, Timings,
     correction, parser, ranking,
@@ -406,7 +406,15 @@ impl Engine {
             singles = chars;
             scored = rest;
         }
-        let context = |item: &Scored<'_>| (choice(item), self.word_log_prob(&item.hit, log_total));
+        let context = |item: &Scored<'_>| {
+            let choice = choice(item);
+            (
+                choice,
+                self.word_log_prob(&item.hit, log_total),
+                // 整除 CHOICE_TIERS 还原「真在这串键下选过」的次数（余数 < CHOICE_TIERS），与九键同口径
+                choice / CHOICE_TIERS >= PROMOTE_CHOICE_THRESHOLD,
+            )
+        };
         // 这串键下选过的词不进预选，并按主词库的词排：预选只看结构与词频，排序先比是不是主词库，
         // `ss` 选过几次的 屎山（知意词表里的词，低主词库一档）会排在几千个主词库两字词后面被截掉，轮不到按选择次数排
         let rank_keeping_chosen = |items: &mut Vec<Scored<'_>>, limit: usize| {

@@ -343,3 +343,28 @@ fn chosen_low_frequency_word_survives_preselect() {
     assert!(pos.is_some(), "反复选的低频词被预选砍掉了（候选数 {}）", query.candidates.items.len());
     assert!(pos.unwrap() < 5, "选过的词应该排到前面，实际位置 {pos:?}");
 }
+
+#[test]
+fn often_chosen_char_tops_single_key() {
+    // 回归：单键 3 下「饿/额」是完整音节命中(first_tier)，「的」只是前缀命中。
+    // 选够门槛后「的」应越过结构差排到最前，不必再点拼音列的 d。
+    let words = "的\tde\t100\n得\tde\t200\n饿\te\t9000\n额\te\t8000\n恶\te\t7000\n";
+    let mut choices = HashMap::new();
+    choices.insert("de\t的".to_string(), 3); // 门槛 3
+    let mut engine = Engine::new(Dictionary::parse(words).unwrap())
+        .with_learner(Box::new(CountingLearner(choices)));
+    engine.set_nine_key(true);
+    engine.set_input("3");
+    let q = engine.query().unwrap();
+    assert_eq!(texts_of(&q)[0], "的", "选够次数后单键下应置顶");
+
+    // 门槛以下（选 2 次）不置顶
+    let mut choices2 = HashMap::new();
+    choices2.insert("de\t的".to_string(), 2);
+    let mut engine2 = Engine::new(Dictionary::parse(words).unwrap())
+        .with_learner(Box::new(CountingLearner(choices2)));
+    engine2.set_nine_key(true);
+    engine2.set_input("3");
+    let q2 = engine2.query().unwrap();
+    assert_ne!(texts_of(&q2)[0], "的", "没到门槛不应置顶");
+}

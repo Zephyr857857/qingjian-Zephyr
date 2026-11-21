@@ -720,3 +720,20 @@ fn input_log_records_the_session_and_page_turns() {
     };
     assert_eq!(commit.pages, 2);
 }
+
+#[test]
+fn often_chosen_word_tops_full_pinyin() {
+    // 全拼：反复选的低频词「的」应越过词频高的同韵词置顶（门槛 3）。
+    let words = "的\tde\t100\n得\tde\t200\n德\tde\t300\n特\tte\t9000\n";
+    let mut choices = HashMap::new();
+    choices.insert("de\t的".to_string(), 3);
+    let mut engine = Engine::new(Dictionary::parse(words).unwrap())
+        .with_learner(Box::new(CountingLearner(choices)));
+    engine.set_input("de");
+    let q = engine.query().unwrap();
+    assert_eq!(
+        q.candidates.items.first().unwrap().text,
+        "的",
+        "全拼选够次数后应置顶"
+    );
+}
