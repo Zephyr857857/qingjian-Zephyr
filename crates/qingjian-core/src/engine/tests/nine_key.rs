@@ -293,3 +293,31 @@ fn an_unpinned_syllable_keeps_the_reading_the_user_picked() {
     engine.backspace();
     assert_eq!(engine.query().unwrap().candidates.items[0].text, "米");
 }
+
+#[test]
+fn single_char_pileup_does_not_become_top_sentence() {
+    // 只有单字、没有「你好」这个词：ni hao（64426）不该拼出无译词的整句顶到首选，
+    // 否则就像九键打单字时冒出「了会」那样，把词库单字挤下去、还让拼音行跟着整句读错。
+    let words = "你\tni\t9000\n好\thao\t8000\n";
+    let mut engine = Engine::new(Dictionary::parse(words).unwrap());
+    engine.set_nine_key(true);
+    let query = query(&mut engine, "64426");
+    let first = &query.candidates.items[0];
+    // 首选是词库单字、不是拼凑整句
+    assert_eq!(first.text, "你");
+    assert_ne!(first.kind, CandidateKind::Sentence);
+    assert!(!query.candidates.items.iter().any(|c| c.kind == CandidateKind::Sentence && c.text == "你好"));
+    // 拼音行、拼音列、候选首选三者读音对齐（都从「你」读 ni）
+    assert_eq!(query.marked_text(), "ni'gao");
+    assert_eq!(query.pinyin_choices[0], "ni");
+}
+
+#[test]
+fn credible_multiword_sentence_still_leads() {
+    // 词库里有成词的「你好」时，整句仍照旧顶首位，官方整句能力不破坏。
+    let words = "你\tni\t9000\n好\thao\t8000\n你好\tni hao\t20000\n";
+    let mut engine = Engine::new(Dictionary::parse(words).unwrap());
+    engine.set_nine_key(true);
+    let query = query(&mut engine, "64426");
+    assert_eq!(query.candidates.items[0].text, "你好");
+}

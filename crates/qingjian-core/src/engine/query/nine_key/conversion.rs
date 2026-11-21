@@ -19,6 +19,16 @@ impl Engine {
         if conversion.word_count() < 2 || conversion.has_placeholder() {
             return None;
         }
+        // 单字拼出来的整句（如 548 切出的「了会」）不该顶在单字候选前面：
+        // 与全拼一致，整句要含一个成词的多字词、且路径上的词都被词库/语言模型认识。
+        // 这样打单字时首选仍是词库单字，拼音行与拼音列也跟着同一首选，三者对齐。
+        if !self.credible(&conversion, None) {
+            return None;
+        }
+        // 整句要把敲进去的位置都覆盖到，只用了前缀的拼凑不算（否则第一位置没敲完就冒整句）。
+        if shapes.iter().all(|shape| conversion.syllables.len() < shape.positions.len()) {
+            return None;
+        }
         if items
             .iter()
             .any(|c| c.text == conversion.text && c.syllables == conversion.syllables)

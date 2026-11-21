@@ -245,7 +245,7 @@ impl Engine {
     /// 每个音节也总有个常用字，全靠单字拼出来的（赞 + 恩）不算。
     /// 不要求主词库：补充词库里模型认识的词（傻逼）也是用户敲的原话。
     /// 两条都有的词不算：长句里有个模型不认识的专名（菩提伽耶），纠正那条也照样带着它，不能因此判原样读不通（`xintaan…` → 新法案）。
-    fn credible(&self, path: &Conversion, corrected: Option<&Conversion>) -> bool {
+    pub(in crate::engine::query) fn credible(&self, path: &Conversion, corrected: Option<&Conversion>) -> bool {
         let shared = |text: &str| corrected.is_some_and(|c| c.words.iter().any(|w| w.text == text));
         !path.has_placeholder()
             && path.words.iter().any(|word| word.text.chars().count() >= 2)
