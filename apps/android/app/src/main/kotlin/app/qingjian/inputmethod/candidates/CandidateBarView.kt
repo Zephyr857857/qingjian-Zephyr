@@ -49,13 +49,13 @@ class CandidateBarView(
         /** 工具栏左端的 logo：进功能面板。 */
         fun openFunctions()
 
-        /** 工具栏右端：收起键盘。 */
+        /** 工具栏右端、以及组句时候选栏右端的 ⌄：收起键盘。 */
         fun hideKeyboard()
 
         /** 拖动调高度：[deltaPx] 是手指相对按下处往上走的距离，[done] 表示手指抬起。 */
         fun onResizeDrag(deltaPx: Float, done: Boolean)
 
-        /** 点了候选右端的 ⌄：展开全部候选（[CandidateGrid]）。 */
+        /** 在候选栏上向下滑：展开全部候选（[CandidateGrid]）。 */
         fun onExpand()
     }
 
@@ -82,11 +82,18 @@ class CandidateBarView(
         strokeWidth = maxOf(1f, density * 0.7f)
     }
 
-    /** 候选右端 ⌄ 那一格的宽；候选滚到它底下为止。 */
+    /** 候选右端收起键那一格的宽；候选滚到它底下为止。 */
     private val expandSlot = 46f * density
     private val expandFill = Paint()
     private val expandIcon = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = palette.text }
 
+    /** 在候选栏上向下滑多少算「展开全部候选」。 */
+    private val swipeExpandPx = 28f * density
+
+    /** 本次触摸是否已判定为下滑展开，避免重复触发、也拦住随后的横向 fling。 */
+    private var swipeExpanded = false
+
+    /** 有候选时右端显示收起键。 */
     private val expandable: Boolean get() = strip.candidates.isNotEmpty()
 
     /** 显示的是工具栏：横滑滑的是它中间那排图标，不是整条。 */
@@ -99,7 +106,7 @@ class CandidateBarView(
 
     private val toolbarShown: Boolean get() = !resizing && strip.isEmpty && notice == null
 
-    /** 候选能用的宽度：有 ⌄ 时让出那一格。 */
+    /** 候选能用的宽度：有收起键时让出那一格。 */
     private val stripWidth: Int get() = if (expandable) width - expandSlot.toInt() else width
 
     /** 气泡对着的候选下标；气泡开着时高亮跟到它上面。 */
@@ -135,12 +142,25 @@ class CandidateBarView(
                 invalidate()
                 return true
             }
+            // 下滑展开全部候选（对标搜狗「下滑展开更多候选」）；横向滑动仍是滚候选，两者按主轴区分
+            if (!swipeExpanded && e1 != null) {
+                val totalDy = e2.y - e1.y
+                val totalDx = e2.x - e1.x
+                if (totalDy > swipeExpandPx && totalDy > kotlin.math.abs(totalDx) * 1.2f) {
+                    swipeExpanded = true
+                    scroller.forceFinished(true)
+                    Haptics.tap(context)
+                    listener.onExpand()
+                    return true
+                }
+            }
+            if (swipeExpanded) return true
             scrollTo((scrollX + dx).toInt().coerceIn(0, maxScroll()), 0)
             return true
         }
 
         override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
-            if (onPreedit) return true
+            if (onPreedit || swipeExpanded) return true
             if (toolbarShown) {
                 scroller.fling(toolbar.offset.toInt(), 0, -vx.toInt(), 0, 0, toolbar.maxOffset(width).toInt(), 0, 0)
             } else {
@@ -208,7 +228,7 @@ class CandidateBarView(
         strip.isEmpty -> toolbar.draw(canvas, width)
         else -> {
             strip.draw(canvas, scrollX, stripWidth)
-            if (expandable) drawExpand(canvas)
+            if (expandable) drawHide(canvas)
             // 候选条与键盘之间一道细线，分出层次；滚动时线不跟着走
             canvas.drawRect(scrollX.toFloat(), height - divider.strokeWidth, scrollX + width.toFloat(), height.toFloat(), divider)
         }
@@ -220,6 +240,7 @@ class CandidateBarView(
         popup.showing -> onPopupTouch(event)
         else -> {
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                swipeExpanded = false
                 onPreedit = !strip.isEmpty && strip.caretAt(event.x, event.y) >= 0
                 dragCaret = -1
                 // 长按一触发 GestureDetector 就不再给拖动；按在拼音行上先停一停再拖也要跟
@@ -229,14 +250,14 @@ class CandidateBarView(
         }
     }
 
-    /** 钉在右端的 ⌄：与候选行同一高度居中，左边一道短竖线隔开。 */
-    private fun drawExpand(canvas: Canvas) {
+    /** 钉在右端的收起键：与候选行同一高度居中，左边一道短竖线隔开。 */
+    private fun drawHide(canvas: Canvas) {
         val left = scrollX + stripWidth.toFloat()
         expandFill.color = strip.background
         canvas.drawRect(left, 0f, scrollX + width.toFloat(), height.toFloat(), expandFill)
         val cy = (strip.candidatesTop + height) / 2f
         canvas.drawRect(left, cy - 12 * density, left + divider.strokeWidth, cy + 12 * density, divider)
-        PanelIcons.draw(canvas, PanelIcons.Icon.EXPAND, left + expandSlot / 2, cy, 24 * density, expandIcon)
+        PanelIcons.draw(canvas, PanelIcons.Icon.HIDE, left + expandSlot / 2, cy, 24 * density, expandIcon)
     }
 
     /**
@@ -253,7 +274,8 @@ class CandidateBarView(
 
     private fun tap(x: Float, y: Float) {
         if (expandable && x >= stripWidth) {
-            listener.onExpand()
+            Haptics.tap(context)
+            listener.hideKeyboard()
             return
         }
         // 拼音行钉在视口上，不随候选滚动，按视图坐标查
