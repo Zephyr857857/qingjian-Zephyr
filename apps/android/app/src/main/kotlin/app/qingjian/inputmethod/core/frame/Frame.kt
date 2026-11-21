@@ -38,8 +38,6 @@ data class Frame(
                     forgettable = item.optBoolean("forgettable"),
                     cloud = item.optBoolean("cloud"),
                     contact = item.optBoolean("contact"),
-                    pinnable = item.optBoolean("pinnable"),
-                    pinned = item.optBoolean("pinned"),
                 )
             }
             val choices = root.getJSONArray("pinyin_choices")

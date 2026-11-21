@@ -93,21 +93,6 @@ pub extern "system" fn Java_app_qingjian_inputmethod_core_Native_forget<'local>(
     frame(env, handle, |session| session.forget(index))
 }
 
-/// 长按候选的「置顶 / 取消置顶」：`pin` 非零置顶，零取消。
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_app_qingjian_inputmethod_core_Native_pinCandidate<'local>(
-    env: JNIEnv<'local>,
-    _this: JObject<'local>,
-    handle: jlong,
-    index: jint,
-    pin: jboolean,
-) -> jstring {
-    let Ok(index) = usize::try_from(index) else {
-        return std::ptr::null_mut();
-    };
-    frame(env, handle, |session| session.pin_candidate(index, pin != 0))
-}
-
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_app_qingjian_inputmethod_core_Native_commitRaw<'local>(
     env: JNIEnv<'local>,

@@ -10,8 +10,4 @@ data class Candidate(
     val cloud: Boolean = false,
     /** 通讯录里的名字，候选条在词的右上角画一个人头。 */
     val contact: Boolean = false,
-    /** 长按能置顶（当前输入码合法、非英文模式）。 */
-    val pinnable: Boolean = false,
-    /** 这条已经是置顶词，长按给「取消置顶」。 */
-    val pinned: Boolean = false,
 )

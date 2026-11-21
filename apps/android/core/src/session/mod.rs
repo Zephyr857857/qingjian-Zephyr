@@ -235,12 +235,9 @@ impl Session {
                         .items
                         .first()
                         .map_or_else(Vec::new, |lead| differs_from_lead(lead, candidate));
-                    let pinned = matches!(candidate.kind, qingjian_core::CandidateKind::Custom(_));
-                    let pinnable = self.engine.pin_target(candidate).is_some();
                     FrameCandidate::from(candidate)
                         .with_contact(self.engine.is_contact(&candidate.text))
                         .with_diff(diff)
-                        .with_pin(pinnable, pinned)
                 })
                 .collect(),
             expression: self.engine.expression_mode() || self.engine.unicode_entry(),
