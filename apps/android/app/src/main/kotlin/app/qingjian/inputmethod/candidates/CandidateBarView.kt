@@ -194,10 +194,19 @@ class CandidateBarView(
     fun show(preedit: String, candidates: List<Candidate>) {
         closePopup()
         if (preedit.isNotEmpty() || candidates.isNotEmpty()) clearNotice.run()
+        val wasEmpty = strip.isEmpty
         strip.show(preedit, candidates)
         scroller.forceFinished(true)
         scrollTo(0, 0)
-        repaint()
+        // 工具栏→候选栏的首次切换必须同步画位图：数据先于位图变，异步会露出
+        // 一帧「数据非空、位图还是 null」的空白，看起来就是候选栏闪一下。
+        // 候选栏已经在的连续输入仍走异步，保留快打流畅。
+        if (wasEmpty && !strip.isEmpty) {
+            removeCallbacks(pendingRender)
+            pendingRender.run()
+        } else {
+            repaint()
+        }
     }
 
     /** 在工具栏的位置放一句提示 [message]，点它执行 [action]（打开对应的设置页）。 */
