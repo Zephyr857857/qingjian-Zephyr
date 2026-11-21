@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use crate::engine::{Learner, MAX_CANDIDATES, choice_key};
-use crate::ranking::{PROMOTE_CHOICE_THRESHOLD, Scored};
+use crate::ranking::Scored;
 use crate::{
     Candidate, CandidateKind, CandidateList, Engine, ParseError, Query, Timings, ranking, sentence,
     shortcut,
@@ -95,7 +95,7 @@ impl Engine {
                 item.hit.text,
                 sentence::fallback_log_prob(item.hit.frequency, item.hit.secondary, log_total),
             );
-            (choice, log_prob, choice >= PROMOTE_CHOICE_THRESHOLD)
+            (choice, log_prob)
         });
         // 一级简码的码表顺序优先于个人选择与上下文排序。
         if let Some(order) = single_letter_order {

@@ -37,11 +37,6 @@ pub const WEIGHT_BONUS: f64 = 0.5;
 /// 加分里计入的选择次数上限。
 pub const WEIGHT_CAP: u32 = 20;
 
-/// 「常用字置顶」门槛：某个字在同一输入串（九键是它自己的拼音，全拼是敲的字母）下被选中这么多次后，
-/// 就进排序键的最高档，越过 first_tier 等结构项排到候选最前——让反复用的单字在单键/简拼下不用再手选读法。
-/// 各输入方案按自己的原始选择次数判定（全拼不把 `CHOICE_TIERS` 放大值算进来）。
-pub const PROMOTE_CHOICE_THRESHOLD: u32 = 3;
-
 /// 模糊音命中扣的分（词频减半）。敲错变体的代价见 `correction::TypoKind`。
 pub const FUZZY_PENALTY: f64 = std::f64::consts::LN_2;
 
@@ -92,7 +87,7 @@ pub fn weight_bonus(count: u32) -> f64 {
 pub fn rank(
     items: &mut Vec<Scored<'_>>,
     limit: usize,
-    context: impl Fn(&Scored<'_>) -> (u32, f64, bool),
+    context: impl Fn(&Scored<'_>) -> (u32, f64),
 ) {
     // 远超上限时先按结构键 + 词频线性选出前面一段：同一个词会被多种切分命中，多选一倍留给去重（结果仍可能略少于上限，无妨）
     let preselect = limit.saturating_mul(2);
@@ -108,9 +103,9 @@ pub fn rank(
     let mut keyed: Vec<(SortKey<'_>, Scored<'_>)> = items
         .drain(..)
         .map(|item| {
-            let (choice, log_prob, promoted) = context(&item);
+            let (choice, log_prob) = context(&item);
             let score = log_prob + weight_bonus(item.weight) - item.penalty;
-            (item.key(choice, score, promoted), item)
+            (item.key(choice, score), item)
         })
         .collect();
     keyed.sort_unstable_by(|a, b| a.0.cmp(&b.0));

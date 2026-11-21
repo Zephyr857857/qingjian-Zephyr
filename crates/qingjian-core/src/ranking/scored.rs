@@ -40,12 +40,9 @@ pub struct Scored<'a> {
 /// 与 [`SortKey`] 的前几项同序，只是不拿文本做最后的平手项（预选边界上的平手谁留下无所谓）。
 pub type PreselectKey = u128;
 
-/// 排序键，越小越靠前。元组的顺序即排序规则，见模块文档；第 0 项是「用户选够次数 » 置顶档」（凌驾于结构项之上，
-/// 让反复选的常用字在单键/简拼下也能排到最前），第 1 项起是原有的结构项；第五项（现第 6）是注音声调代价，
-/// 第六项（现第 7）是同输入串下的选择次数，第七项（现第 8）是上下文得分（毫分，整数才能比较）。
-/// 文本借自词库，键可以脱离 `Scored` 存放。
+/// 排序键，越小越靠前。元组的顺序即排序规则，见模块文档；第五项是注音的声调代价，第六项是同输入串下的选择次数，
+/// 第七项是上下文得分（毫分，整数才能比较）。文本借自词库，键可以脱离 `Scored` 存放。
 pub type SortKey<'a> = (
-    Reverse<bool>,
     Reverse<bool>,
     Reverse<usize>,
     usize,
@@ -93,11 +90,8 @@ impl<'a> Scored<'a> {
     }
 
     /// `choice` 是同输入串下的选择次数，`score` 是上下文得分（log 概率，已含用户加分与模糊音 / 敲错扣分）。
-    /// `promoted` 是调用方按原始选择次数判定的「选够次数、置顶」标记（各输入方案口径不同，故由此传入），
-    /// 作为排序键的最高位，让反复选的常用字越过 first_tier 等结构项排到最前。
-    pub(super) fn key(&self, choice: u32, score: f64, promoted: bool) -> SortKey<'a> {
+    pub(super) fn key(&self, choice: u32, score: f64) -> SortKey<'a> {
         (
-            Reverse(promoted),
             Reverse(self.first_tier()),
             Reverse(self.coverage),
             self.abbreviated,

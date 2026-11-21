@@ -49,7 +49,7 @@ fn exact_beats_frequency_and_weight_beats_static_frequency() {
             split: false,
         },
     ];
-    rank(&mut items, usize::MAX, |_| (0, 0.0, false));
+    rank(&mut items, usize::MAX, |_| (0, 0.0));
     let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
     assert_eq!(texts, ["开发", "开放", "开发者"]);
 }
@@ -79,7 +79,7 @@ fn context_score_orders_within_the_same_structure() {
         },
     ];
     // 上下文说 吧 更像：词频高的 把 让位
-    let by_context = |s: &Scored<'_>| (0, if s.hit.text == "吧" { -1.0 } else { -6.0 }, false);
+    let by_context = |s: &Scored<'_>| (0, if s.hit.text == "吧" { -1.0 } else { -6.0 });
     rank(&mut items, usize::MAX, by_context);
     let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
     assert_eq!(texts, ["吧", "把"]);
@@ -88,7 +88,6 @@ fn context_score_orders_within_the_same_structure() {
         (
             u32::from(s.hit.text == "把"),
             if s.hit.text == "吧" { -1.0 } else { -6.0 },
-            false,
         )
     });
     assert_eq!(items[0].hit.text, "把");
@@ -96,7 +95,7 @@ fn context_score_orders_within_the_same_structure() {
     for item in &mut items {
         item.weight = u32::from(item.hit.text == "把") * 3;
     }
-    rank(&mut items, usize::MAX, |_| (0, -2.0, false));
+    rank(&mut items, usize::MAX, |_| (0, -2.0));
     assert_eq!(items[0].hit.text, "把");
     for item in &mut items {
         item.weight = 3;
@@ -106,7 +105,7 @@ fn context_score_orders_within_the_same_structure() {
             0.0
         };
     }
-    rank(&mut items, usize::MAX, |_| (0, -2.0, false));
+    rank(&mut items, usize::MAX, |_| (0, -2.0));
     assert_eq!(items[0].hit.text, "吧");
 }
 
@@ -134,7 +133,7 @@ fn fewer_abbreviated_syllables_win_at_equal_coverage() {
             split: false,
         },
     ];
-    rank(&mut items, usize::MAX, |_| (0, 0.0, false));
+    rank(&mut items, usize::MAX, |_| (0, 0.0));
     assert_eq!(items[0].hit.text, "开放");
 }
 
@@ -170,7 +169,7 @@ fn deduplicates_by_text_keeping_best() {
             split: false,
         },
     ];
-    rank(&mut items, usize::MAX, |_| (0, 0.0, false));
+    rank(&mut items, usize::MAX, |_| (0, 0.0));
     assert_eq!(items.len(), 1);
     assert!(items[0].hit.exact);
 }
