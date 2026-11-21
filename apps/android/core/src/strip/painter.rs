@@ -1,5 +1,7 @@
 //! 候选条的画笔：记住最新一帧要显示的内容，壳要画时按宽度倍数与深浅色出一张位图。
 
+use std::collections::HashMap;
+
 use qingjian_render::{FontLibrary, Frame as RenderFrame, Layout, Mode, Rendered, Renderer, Theme};
 
 use super::{StripHit, StripMeta, has_emoji, preedit, rows};
@@ -9,6 +11,9 @@ use crate::frame::Frame;
 
 /// 中日同形字按简体选字形；学习语言是日语时译文里的汉字也用简体字形，与桌面端一致。
 const LOCALE: &str = "zh-CN";
+
+/// 量宽缓存上限：候选译文就那些字，几千条足够命中绝大多数，又不至于随输入无限涨。
+const WIDTH_CACHE_CAP: usize = 4096;
 
 pub struct StripPainter {
     renderer: Renderer,
@@ -28,6 +33,10 @@ pub struct StripPainter {
 
     /// 上次画的位图，等壳来拷。
     last: Option<Rendered>,
+
+    /// 候选译文/词性的量宽缓存。同一批候选每次按键都重新量（九键连打时尤其密），
+    /// 字号只有几档、文本高度重复，缓存命中率高；随字形缓存一起清（[Self::trim_cache]）。
+    widths: HashMap<(String, u32), f32>,
 }
 
 impl StripPainter {
@@ -43,6 +52,7 @@ impl StripPainter {
             content: RenderFrame::default(),
             emoji: Vec::new(),
             last: None,
+            widths: HashMap::new(),
         })
     }
 
@@ -57,6 +67,7 @@ impl StripPainter {
         self.light = sized(false);
         self.dark = sized(true);
         self.text_scale = text_scale;
+        self.widths.clear();
     }
 
     /// 记下一帧要显示的拼音、提示与候选。
@@ -68,11 +79,23 @@ impl StripPainter {
             .filter(|(_, candidate)| has_emoji(&candidate.text))
             .map(|(i, _)| i)
             .collect();
+        // 量宽结果缓存：命中直接取，未命中量一次记下。字号存位模式做 key（有限档）
+        let widths = &mut self.widths;
+        let renderer = &mut self.renderer;
+        let measure = |text: &str, size: f32| -> f32 {
+            let key = (text.to_owned(), size.to_bits());
+            if let Some(&w) = widths.get(&key) {
+                return w;
+            }
+            let w = renderer.measure_points(text, size);
+            if widths.len() < WIDTH_CACHE_CAP {
+                widths.insert(key, w);
+            }
+            w
+        };
         self.content = RenderFrame {
             preedit: (!frame.preedit.is_empty()).then(|| preedit(frame)),
-            rows: rows(&frame.candidates, self.text_scale, |text, size| {
-                self.renderer.measure_points(text, size)
-            }),
+            rows: rows(&frame.candidates, self.text_scale, measure),
             highlighted: None,
             footer: None,
             previous_page: false,
@@ -131,6 +154,7 @@ impl StripPainter {
     /// 字形缓存没有上限，不清会随输入量一直涨。清掉后下一帧按需重新栅格化。
     pub fn trim_cache(&mut self) {
         self.renderer.trim_cache();
+        self.widths.clear();
     }
 
     /// 把上次画的像素拷进 `out`；没画过或 `out` 不够大返回 `false`。

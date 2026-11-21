@@ -12,6 +12,7 @@ import app.qingjian.inputmethod.core.frame.Frame
 import app.qingjian.inputmethod.keyboard.ShiftState
 import app.qingjian.inputmethod.keyboard.layout.Key
 import app.qingjian.inputmethod.keyboard.layout.KeyboardLayout
+import app.qingjian.inputmethod.perf.QjPerf
 import app.qingjian.inputmethod.settings.Settings
 import kotlin.math.abs
 
@@ -195,6 +196,15 @@ class Composer(private val engine: Engine, private val host: Host) {
     }
 
     fun onKey(key: Key) {
+        QjPerf.begin()
+        try {
+        keyBody(key)
+        } finally {
+            QjPerf.end(key.label)
+        }
+    }
+
+    private fun keyBody(key: Key) {
         // 候选条上放着电话邮箱或「撤销」时，删除、重输先只收起它们，不动输入框里的字
         if ((key == Key.Backspace || key == Key.Clear) && !composing && completing && engine.hasOffer()) {
             apply(engine.clear())
@@ -577,6 +587,7 @@ class Composer(private val engine: Engine, private val host: Host) {
 
     private fun apply(frame: Frame) {
         val connection = host.connection ?: return
+        QjPerf.markEngine()
         // 一段组句开头：组合文字放进去之前读光标前后文，给云联想
         val surrounding = if (engine.predicting && preedit.isEmpty() && frame.preedit.isNotEmpty()) {
             (connection.getTextBeforeCursor(SURROUNDING_BEFORE, 0)?.toString().orEmpty()) to
@@ -595,6 +606,7 @@ class Composer(private val engine: Engine, private val host: Host) {
             connection.finishComposingText()
         }
         connection.endBatchEdit()
+        QjPerf.markComposing()
         preedit = frame.preedit
         if (preedit.isEmpty()) {
             sentPreedits.clear()

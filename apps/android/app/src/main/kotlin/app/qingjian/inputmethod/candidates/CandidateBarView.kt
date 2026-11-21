@@ -11,6 +11,7 @@ import android.widget.OverScroller
 import app.qingjian.inputmethod.R
 import app.qingjian.inputmethod.core.frame.Candidate
 import app.qingjian.inputmethod.keyboard.Haptics
+import app.qingjian.inputmethod.perf.QjPerf
 import app.qingjian.inputmethod.panel.base.PanelIcons
 import app.qingjian.inputmethod.popup.ChoicePopup
 import app.qingjian.inputmethod.settings.ToolbarTool
@@ -80,6 +81,13 @@ class CandidateBarView(
     private val divider = Paint().apply {
         color = palette.faint
         strokeWidth = maxOf(1f, density * 0.7f)
+    }
+
+    // 诊断版：候选条顶部叠一行耗时统计
+    private val diagBg = Paint().apply { color = 0xB3000000.toInt() }
+    private val diagText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        textSize = 10f * density
     }
 
     /** 候选右端收起键那一格的宽；候选滚到它底下为止。 */
@@ -205,8 +213,18 @@ class CandidateBarView(
         resizing = true
     }
 
-    /** 按当前高亮重画位图：新的一帧到了、或长按气泡换了对着的候选。 */
+    /**
+     * 按当前高亮重画位图：新的一帧到了、或长按气泡换了对着的候选。
+     * 栅格化（Rust renderStrip）是按键链路上最重的一段，挪到下一次消息循环做，
+     * 并合并一帧内的多次请求（快打时几键只画最后一次）。Rust 侧候选内容在 push 时已备好，
+     * 这里只读当前 popupIndex / stripWidth，天然取最新，合并不会画旧帧。
+     */
     private fun repaint() {
+        removeCallbacks(pendingRender)
+        post(pendingRender)
+    }
+
+    private val pendingRender = Runnable {
         strip.paint(if (strip.isEmpty) null else source.render(popupIndex.coerceAtLeast(0), palette.dark, stripWidth))
         invalidate()
     }
@@ -222,16 +240,43 @@ class CandidateBarView(
         }
     }
 
-    override fun onDraw(canvas: Canvas) = when {
-        resizing -> resizeHandle.draw(canvas, width)
-        strip.isEmpty && notice != null -> toolbar.drawNotice(canvas, width, notice!!.first)
-        strip.isEmpty -> toolbar.draw(canvas, width)
-        else -> {
-            strip.draw(canvas, scrollX, stripWidth)
-            if (expandable) drawHide(canvas)
-            // 候选条与键盘之间一道细线，分出层次；滚动时线不跟着走
-            canvas.drawRect(scrollX.toFloat(), height - divider.strokeWidth, scrollX + width.toFloat(), height.toFloat(), divider)
+    override fun onDraw(canvas: Canvas) {
+        when {
+            resizing -> resizeHandle.draw(canvas, width)
+            strip.isEmpty && notice != null -> toolbar.drawNotice(canvas, width, notice!!.first)
+            strip.isEmpty -> toolbar.draw(canvas, width)
+            else -> {
+                strip.draw(canvas, scrollX, stripWidth)
+                if (expandable) drawHide(canvas)
+                // 候选条与键盘之间一道细线，分出层次；滚动时线不跟着走
+                canvas.drawRect(scrollX.toFloat(), height - divider.strokeWidth, scrollX + width.toFloat(), height.toFloat(), divider)
+            }
         }
+        if (QjPerf.ENABLED) drawDiag(canvas)
+    }
+
+    /** 诊断版：在候选条顶部画两行耗时（最近一笔 + 中位数/P90 汇总），看清「慢半拍」卡在哪一段。 */
+    private fun drawDiag(canvas: Canvas) {
+        val line1 = QjPerf.summary()
+        val last = QjPerf.last()
+        val line2 = if (last != null) "本键${last[0]}ms 组${last[1]} 连${last[2]} 渲${last[3]}" else ""
+        val pad = 4f * density
+        val lh = 12f * density
+        val boxH = pad * 2 + lh * 2
+        canvas.drawRect(0f, 0f, width.toFloat(), boxH, diagBg)
+        // 宽屏/窄屏都保证整行可见：超宽就横向压缩，不裁字
+        fun line(text: String, size: Float, y: Float) {
+            if (text.isEmpty()) return
+            diagText.textSize = size
+            val w = diagText.measureText(text)
+            val avail = width - pad * 2
+            canvas.save()
+            if (w > avail) canvas.scale(avail / w, 1f, pad, y)
+            canvas.drawText(text, pad, y, diagText)
+            canvas.restore()
+        }
+        line(line1, 9.5f * density, pad + lh * 0.8f)
+        line(line2, 10.5f * density, pad + lh * 1.85f)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -361,6 +406,7 @@ class CandidateBarView(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        removeCallbacks(pendingRender)
         closePopup()
     }
 
