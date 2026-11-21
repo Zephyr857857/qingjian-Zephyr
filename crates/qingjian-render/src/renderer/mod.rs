@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! 渲染器：一帧 + 排布 + 主题 → 位图。排版与 macOS 壳的 `CandidateView` 一致：顶部拼音行，竖排一行一个候选、横排排成一行。
 //!
 //! 先按帧和主题模板建一棵场景树（[`Scene`]），布局后算出点击区域，再交给引擎的 [`Stage`] 画、做过渡与动画。

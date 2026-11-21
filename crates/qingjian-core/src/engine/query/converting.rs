@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! 整句候选：把词图里重排过的前几条路径变成候选，以及整句转换本身。
 
 use crate::engine::choice::char_emission;

@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! 九宫格的整句：边界歧义只有语言模型分得清（`tian qi hen` 与 `tian shi en`），所以多种形状各转一次取最高分。
 
 use crate::candidate::{Candidate, CandidateKind};

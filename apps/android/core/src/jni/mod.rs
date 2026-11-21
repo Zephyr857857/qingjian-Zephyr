@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! JNI 出口，对应 Kotlin 的 `app.qingjian.inputmethod.core.Native`。
 //!
 //! 句柄是 `Box<Handle>`（会话加候选条画笔）的裸指针，Kotlin 侧只在主线程调；每个出口都拦 panic，

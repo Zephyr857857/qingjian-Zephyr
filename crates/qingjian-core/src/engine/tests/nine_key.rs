@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! 九宫格：数字串出候选、整句、拼音列、选定拼音、逐词上屏。
 
 use super::*;

@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 //! Android 输入法的 Rust 侧：装配 Engine、把软键盘的操作翻成 Engine 调用、经 JNI 交给 Kotlin 壳。
 //!
 //! Android 的输入法跑在自己的进程里，没有 Server / 薄壳之分，Engine 直接装在这个 `.so` 里。

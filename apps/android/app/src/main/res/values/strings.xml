@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md. -->
 <resources>
     <string name="app_name">青简</string>
     <string name="subtype_pinyin">拼音</string>

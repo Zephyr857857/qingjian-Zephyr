@@ -1,3 +1,4 @@
+# Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 # JNI 入口：Rust 侧按 Java_app_qingjian_inputmethod_core_Native_* 的符号名找方法，
 # 类名与方法名都不能被 R8 改掉，否则 System.loadLibrary 后调用全部 UnsatisfiedLinkError。
 -keep class app.qingjian.inputmethod.core.Native {

@@ -1,3 +1,4 @@
+# Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 [package]
 name = "qingjian-android"
 description = "Android 输入法的 Rust 侧：Engine 装配 + JNI 接口，编成 libqingjian_android.so"

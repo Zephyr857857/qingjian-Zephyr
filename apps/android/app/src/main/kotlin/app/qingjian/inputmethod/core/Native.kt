@@ -1,3 +1,4 @@
+// Modified by Zephyr857857 on 2026-11-21 (upstream: qingjian-team/qingjian @ 996350c). See FORK.md.
 package app.qingjian.inputmethod.core
 
 /** Rust 侧（apps/android/core）的 JNI 入口。句柄只在主线程用。 */
